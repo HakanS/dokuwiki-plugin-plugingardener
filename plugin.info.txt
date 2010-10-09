@@ -1,0 +1,7 @@
+base   plugingardener
+author Håkan Sandell
+email  sandell.hakan@gmail.com
+date   2010-09-04
+name   PluginGardener plugin
+desc   Plugin for a supervising Dokuwiki plugins
+url    http://github.com/HakanS/dokuwiki-plugin-plugingardener

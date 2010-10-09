@@ -1,0 +1,14 @@
+PluginGardener Plugin for DokuWiki
+
+This plugin downloads plugin homepages from dokuwiki.org and
+also tries to create a local copy of each plugin. 
+
+The plugin has been used to create the plugin surveys,
+see http://www.dokuwiki.org/devel:plugin_survey:start,
+
+If you are tempted to run it, please read to code first.
+You probably have to increase timeouts/memorylimits etc
+to get it working. CLOC and other tools are not included.
+
+(c) 2009, 2010 by Håkan Sandell <sandell.hakan@gmail.com>
+See COPYING for license info.
