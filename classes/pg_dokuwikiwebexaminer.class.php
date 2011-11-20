@@ -5,6 +5,7 @@ class pg_dokuwikiwebexaminer extends pg_gardener {
         echo "<h4>ExamineDokuwikiWeb</h4>\n";
         echo "<ul>";
 
+        $this->collections['repo'] = $this->_getPluginRepo();
         $plugins = $this->_getPluginList();
         $plugins = $this->_applyPluginLimits($plugins);
         $this->collections['plugins'] = $plugins;
@@ -17,6 +18,24 @@ class pg_dokuwikiwebexaminer extends pg_gardener {
         $this->_getEventList();
         echo "</ul>";
         return true;
+    }
+
+    function _getPluginRepo() {
+        echo "<li>Plugin repo ";
+        $localcopy = $this->cfg['localdir'].'repo.xml';
+        if (($this->cfg['downloadindex'] || !file_exists($localcopy)) && !$this->cfg['offline']) {
+            $markup = file_get_contents($this->cfg['doku_repo_uri']);
+            file_put_contents($localcopy, $markup);
+            echo "downloaded</li>\n";
+        } else {
+            $markup = file_get_contents($localcopy);
+            echo "read from file</li>\n";
+        }
+        if (empty($markup)){
+            echo "--> Error - no plugin repo\n";
+            return '';
+        }
+        return $markup;
     }
 
     // list of plugins is taken from namespace index, local copy is kept after download

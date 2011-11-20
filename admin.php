@@ -29,6 +29,7 @@ class admin_plugin_plugingardener extends DokuWiki_Admin_Plugin {
     var $info = array();
     var $collections = array();
 	var $cfg = array( 'doku_eventlist_uri' => 'http://www.dokuwiki.org/devel:events_list',
+                      'doku_repo_uri' => 'http://www.dokuwiki.org/lib/plugins/pluginrepo/repository.php',
                       'doku_index_uri' => 'http://www.dokuwiki.org/plugins',
                       'doku_pluginbase_uri' => 'http://www.dokuwiki.org/plugin:',
                       'bundledsourcedir' => 'c:/DokuWikiStickNew/dokuwiki/lib/plugins/',
