@@ -1099,6 +1099,9 @@ class pg_reportwriter extends pg_gardener {
         $plugin_info[] = 'developer';
         $plugin_info[] = 'pagemodified';
         $plugin_info[] = 'pagesize';
+        $plugin_info[] = 'Gunning-Fog';
+        $plugin_info[] = 'Flesh score';
+        $plugin_info[] = 'Flesh grade';
         $plugin_info[] = 'homepageimage';
         $plugin_info[] = 'toc';
         $plugin_info[] = 'popularity';
@@ -1152,6 +1155,9 @@ class pg_reportwriter extends pg_gardener {
             $plugin_info[] = $info['developer'];
             $plugin_info[] = $info['pagemodified'];
             $plugin_info[] = $info['pagesize'];
+            $plugin_info[] = $info['readbility_gf'];
+            $plugin_info[] = $info['readbility_fs'];
+            $plugin_info[] = $info['readbility_fg'];
             $plugin_info[] = $info['homepageimage'];
             $plugin_info[] = $info['toc'];
             $plugin_info[] = $info['popularity'];

@@ -1,4 +1,7 @@
 <?php
+
+require_once(DOKU_PLUGIN.'/plugingardener/readability.php');
+
 class pg_dokuwikiwebexaminer extends pg_gardener {
 
     function execute() {
@@ -156,6 +159,19 @@ class pg_dokuwikiwebexaminer extends pg_gardener {
         echo "</ul><li>...done</li>\n";
     }
 
+    function _readabilityIndex($plugin, $page) {
+        $page = explode('<p>'.DOKU_LF, $page, 2);
+        $page = explode('<!-- wikipage stop -->', $page[1]);
+        $page = preg_replace('!</(li|h[1-5])>!i','. ',$page[0]); //make sentences from those tags
+        $page = strip_tags($page);
+        $this->info[$plugin]['pagesize'] = strlen($page);
+
+        // calc readability
+        $this->info[$plugin]['readbility_gf'] = gunning_fog_score($page);
+        $this->info[$plugin]['readbility_fs'] = sprintf('%.f2', calculate_flesch($page));
+        $this->info[$plugin]['readbility_fg'] = sprintf('%.f2', calculate_flesch_grade($page));
+    }
+
     // HOMEPAGE
     function _examinePluginHomepage($plugin, $markup) {
 
@@ -166,7 +182,7 @@ class pg_dokuwikiwebexaminer extends pg_gardener {
         $page = explode('<!-- wikipage start -->', $markup);
         $page = explode('bar__bottom', $page[1]);
         $page = $page[0];
-        $this->info[$plugin]['pagesize'] = strlen($page); // TODO: use regex to get a better count while not removing 'Last modified'
+        $this->_readabilityIndex($plugin, $page);
 
         preg_match_all('/by <a ([^>]+(mailto:[^>]+)"[^>]+)\>(.*?)\<\/a\>/', $page, $matches);
         $this->info[$plugin]['developer'] = $matches[3][0];
