@@ -196,6 +196,7 @@ class pg_reportwriter extends pg_gardener {
         $regexp_special = array();
         $nameconflict = array();
 		$conflictgrp = array();
+        $renderer_p = array();
         $canrender_p = array();
         $lookahead_p = array();
         $wing_p = array();
@@ -470,6 +471,7 @@ class pg_reportwriter extends pg_gardener {
         $oldreplacements = array();
         $cssprint = array();
         $cssrtl = array();
+        $plugininfotxt_dev = array();
         foreach ($this->info as $name => $info) {
             if ($info['downloadexamined']) $downloadexamined += 1;
             if ($info['php_lines']) {
@@ -737,6 +739,7 @@ class pg_reportwriter extends pg_gardener {
     function _export_alphaindex($localoutputdir) {
         $resultFile = $localoutputdir.'alphaindex.txt';
 
+        $alphaindex = array();
         foreach ($this->info as $name => $info) {
             if (!$info['maindownload'] && ($info['download'] || $info['download'])) {
                 $alphaindex[substr($name,0,1)][] = pl($name);
@@ -907,7 +910,7 @@ class pg_reportwriter extends pg_gardener {
         fwrite($fp,"==== Tags ====\n");
         fwrite($fp,"\n");
         fwrite($fp,"==== Excluded plugins ====\n");
-        fwrite($fp,"$security plugins (". round($security/$total*100) ."%) are excluded from showing in [[plugins]] list for security reasons. All these has problems with XSS vulnerability allowing arbitrary JavaScript insertion. Authors are informed.\n");
+        fwrite($fp,"$security plugins (". round($security/$total*100) ."%) are excluded from showing in [[plugins]] list for security reasons. All these have problems with XSS vulnerability allowing arbitrary JavaScript insertion. Authors are informed.\n");
         fwrite($fp,"  * ".($security_p?implode(', ', $security_p):'')."\n");
         fwrite($fp,"\n");
 
@@ -986,6 +989,7 @@ class pg_reportwriter extends pg_gardener {
         $resultFile = $localoutputdir.'developers.txt';
         echo "<li>$resultFile</li>";
 
+        $newdeveloper = array();
         foreach ($this->info as $name => $plugin) {
             $devname = str_replace('&#039;','"',htmlspecialchars_decode($plugin['developer']));
             $developer[$devname]['developer'] = $devname;

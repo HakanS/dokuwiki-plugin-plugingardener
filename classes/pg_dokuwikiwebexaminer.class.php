@@ -163,8 +163,8 @@ class pg_dokuwikiwebexaminer extends pg_gardener {
             $this->info[$plugin]['toc'] = 'no TOC';
         }
 
-        $page = explode('<!-- wikipage start -->',$markup);
-        $page = explode('bar__bottom',$page[1]);
+        $page = explode('<!-- wikipage start -->', $markup);
+        $page = explode('bar__bottom', $page[1]);
         $page = $page[0];
         $this->info[$plugin]['pagesize'] = strlen($page); // TODO: use regex to get a better count while not removing 'Last modified'
 

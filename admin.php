@@ -57,12 +57,17 @@ class admin_plugin_plugingardener extends DokuWiki_Admin_Plugin {
         // get plugins that not are plugins (manualy managed local list)
         echo "<h5>Not plugins</h5>";
         $this->collections['notPlugins'] = file($localdir.'not_plugins.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if (!$this->collections['notPlugins']) $this->collections['notPlugins'] = array();
         $this->echodwlink($this->collections['notPlugins']);
+
         // get list of developers with special attention
         $this->collections['trackedDevelopers'] = file($localdir.'tracked_developers.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if (!$this->collections['trackedDevelopers']) $this->collections['trackedDevelopers'] = array();
         $this->collections['trackedDevErr'] = array();
+
         // get list of previous years developers
         $this->collections['previousDevelopers'] = file($localdir.'previous_developers.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if (!$this->collections['previousDevelopers']) $this->collections['previousDevelopers'] = array();
         
 		$handler = new pg_dokuwikiwebexaminer($this);
 		if (!$handler->execute()) {
