@@ -36,14 +36,14 @@ class pg_codedownloader extends pg_gardener {
             $code = html_entity_decode($code);
 
             // Ensure complete overwrite
-            echo "<li>$plugin codeblock extracted</li>\n";
             $plugindir = $localpluginsdir.$plugin.'/';
             if (file_exists($plugindir) && !$this->cfg['overwrite']) return;
             if (file_exists($plugindir)) {
                 $this->dir_delete($plugindir);
             }
             mkdir($plugindir.$plugin, 0777, true);
-            file_put_contents($plugindir.$plugin.'/code.php',$code);
+            file_put_contents($plugindir.$plugin.'/extracted__code__block.php',$code);
+            echo "<li>$plugin codeblock extracted</li>\n";
         } else {
             echo "<li>** $plugin failed **</li>\n";
         }
@@ -51,9 +51,9 @@ class pg_codedownloader extends pg_gardener {
 
     function _downloadPlugin($plugin, $localpluginsdir) {
         $plugindir = $localpluginsdir.$plugin.'/';
-        if (file_exists($plugindir) && !file_exists($plugindir."$plugin/code.php") && !$this->cfg['overwrite']) return true;
+        if (file_exists($plugindir) && !file_exists($plugindir."$plugin/extracted__code__block.php") && !$this->cfg['overwrite']) return true;
 
-        if ($this->info[$plugin]['bundled']) {
+        if ($this->info[$plugin]['bundled']) { // TODO check repo instead
             if (file_exists($plugindir)) {
                 $this->dir_delete($plugindir);
             }

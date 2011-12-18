@@ -24,17 +24,18 @@ require_once(DOKU_PLUGIN.'/plugingardener/classes/pg_reportwriter.class.php');
  * All DokuWiki plugins to extend the admin function
  * need to inherit from this class
  */
-class admin_plugin_plugingardener extends DokuWiki_Admin_Plugin {
+class admin_plugin_plugingardener_gardener extends DokuWiki_Admin_Plugin {
 
     var $info = array();
     var $collections = array();
+                        // danger ! localdir is hardcode in other admin
 	var $cfg = array( 'doku_eventlist_uri' => 'http://www.dokuwiki.org/devel:events_list',
                       'doku_repo_uri' => 'http://www.dokuwiki.org/lib/plugins/pluginrepo/repository.php',
                       'doku_index_uri' => 'http://www.dokuwiki.org/plugins',
                       'doku_pluginbase_uri' => 'http://www.dokuwiki.org/plugin:',
                       'bundledsourcedir' => 'c:/DokuWikiStickNew/dokuwiki/lib/plugins/',
-                      'localdir' => 'C:/DokuWikiStickNew/tmp2/',
-					  'previousYearTotal' => 539, 
+                      'localdir' => 'C:/DokuWikiStickNew/tmp2011/',
+					  'previousYearTotal' => 672, 
 					  'offline' => true, 
 					  'downloadindex' => false, 
 					  'downloadpages' => false, 
@@ -68,6 +69,7 @@ class admin_plugin_plugingardener extends DokuWiki_Admin_Plugin {
         // get list of previous years developers
         $this->collections['previousDevelopers'] = file($localdir.'previous_developers.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         if (!$this->collections['previousDevelopers']) $this->collections['previousDevelopers'] = array();
+        $this->collections['previousDevelopers'] = array_unique($this->collections['previousDevelopers']); 
         
 		$handler = new pg_dokuwikiwebexaminer($this);
 		if (!$handler->execute()) {
@@ -81,8 +83,8 @@ class admin_plugin_plugingardener extends DokuWiki_Admin_Plugin {
 		$handler = new pg_codeexaminer($this);
 		$handler->execute();
 
-		$handler = new pg_reportwriter($this);
-		$handler->execute();
+        $handler = new pg_reportwriter($this);
+        $handler->execute();
 
         echo "<h4>Done</h4>";
         echo "<hr/>\n";
@@ -233,6 +235,7 @@ class admin_plugin_plugingardener extends DokuWiki_Admin_Plugin {
     "pl" => "Polish",
     "ps" => "Pashto",
     "pt" => "Portuguese",
+    "pt-br" => "Brazilian Portuguese",
     "qu" => "Quechua",
     "rm" => "Raeto-Romance",
     "rn" => "Kirundi",

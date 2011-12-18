@@ -1,6 +1,7 @@
 <?php
 
-require_once(DOKU_PLUGIN.'/plugingardener/readability.php');
+//require_once(DOKU_PLUGIN.'/plugingardener/readability.php');
+require_once(DOKU_PLUGIN.'/plugingardener/Text-Statistics/TextStatistics.php');
 
 class pg_dokuwikiwebexaminer extends pg_gardener {
 
@@ -8,15 +9,16 @@ class pg_dokuwikiwebexaminer extends pg_gardener {
         echo "<h4>ExamineDokuwikiWeb</h4>\n";
         echo "<ul>";
 
-        $this->collections['repo'] = $this->_getPluginRepo();
         $plugins = $this->_getPluginList();
         $plugins = $this->_applyPluginLimits($plugins);
         $this->collections['plugins'] = $plugins;
         if (count($plugins) == 0) return false;
         
-        $this->collections['newPlugins'] = $this->_identifyNewPlugins($plugins);
         $this->_examineHomepages($plugins);
+        $this->_identifyNewPlugins($plugins);
         $this->_getPopularityData();
+        $this->_getOldPopularityData();
+        $this->_getPluginRepo();
         $this->_examineExternalHomepages();
         $this->_getEventList();
         echo "</ul>";
@@ -36,9 +38,36 @@ class pg_dokuwikiwebexaminer extends pg_gardener {
         }
         if (empty($markup)){
             echo "--> Error - no plugin repo\n";
-            return '';
+            return;
         }
-        return $markup;
+        $obj = new SimpleXMLElement($markup);
+        $array = $this->obj_array($obj);
+        foreach($array['plugin'] as $repo) {
+            if ($this->info[$repo['id']]) {
+                $this->info[$repo['id']]['repo'] = $repo;
+                if (is_array($repo['compatible']['release'])) {
+                    $this->info[$repo['id']]['bestcompat'] = $repo['compatible']['release'][0];
+                } elseif ($repo['compatible']['release']) {
+                    $this->info[$repo['id']]['bestcompat'] = $repo['compatible']['release'];
+                }
+            }
+        }
+    }
+    /**
+     * Converts objects to arrays     // TODO may be should be kept under parseutils??
+     */
+    function obj_array($obj) {
+        $data = array();
+        if (is_object($obj))
+            $obj = get_object_vars($obj);
+        if (is_array($obj) && count($obj)) {
+            foreach ($obj as $index => $value) {
+                if (is_object($value) || is_array($value))
+                    $value = $this->obj_array($value);
+                $data[$index] = $value;
+            }
+        }
+        return count($data)? $data : null;
     }
 
     // list of plugins is taken from namespace index, local copy is kept after download
@@ -77,14 +106,15 @@ class pg_dokuwikiwebexaminer extends pg_gardener {
     // compare with previous year index
     function _identifyNewPlugins($plugins) {
         $markup = file_get_contents($this->cfg['localdir'].'index_old.htm');
-        if (empty($markup)){
-			return array();
-        } else {
-			preg_match_all('/\/plugin:([-.\w]*)/', $markup, $matches); 
-			$previous_plugins = $matches[1];
-            echo "<li>New plugins identified</li>\n";
-			return array_values(array_diff($plugins, $previous_plugins));
+        if (empty($markup)) return;
+
+        preg_match_all('/\/plugin:([-.\w]*)/', $markup, $matches); 
+        $previous_plugins = $matches[1];
+        $newplugins = array_values(array_diff($plugins, $previous_plugins));
+        foreach ($newplugins as $name) {
+            $this->info[$name]['new'] = 'new';
         }
+        echo "<li>New plugins identified</li>\n";
     }
 
     // download plugins main index page to get popularity
@@ -92,7 +122,7 @@ class pg_dokuwikiwebexaminer extends pg_gardener {
         echo "<li>Plugin popularity ";
         $localcopy = $this->cfg['localdir'].'plugins.htm';
         if (($this->cfg['downloadindex'] || !file_exists($localcopy)) && !$this->cfg['offline']) {
-            $markup = file_get_contents($this->cfg['doku_index_uri']);
+            $markup = file_get_contents($this->cfg['doku_index_uri'].'?pluginsort=p');
             file_put_contents($localcopy, $markup);
             echo "downloaded</li>\n";
         } else {
@@ -107,6 +137,26 @@ class pg_dokuwikiwebexaminer extends pg_gardener {
         foreach ($matches as $plugin) {
             if (strcmp($plugin[1], $this->cfg['firstplugin']) < 0) continue;
             $this->info[$plugin[1]]['popularity'] = $plugin[3];
+            if ($this->cfg['lastplugin'] && (strcmp($plugin[1], $this->cfg['lastplugin']) >= 0)) break;
+        }
+    }
+
+    function _getOldPopularityData() {
+        echo "<li>Plugin old popularity ";
+        $localcopy = $this->cfg['localdir'].'plugins_old.htm';
+        if (file_exists($localcopy)) {
+            $markup = file_get_contents($localcopy);
+            echo "read from file</li>\n";
+        }
+        if (empty($markup)){
+            echo "--> Error - no popularity page</li>\n";
+            return;
+        }
+        preg_match_all('/\/plugin:([-.\w]*)(.*?)\<div class="prog-border" title="(\d+)/', $markup, $matches, PREG_SET_ORDER); 
+        foreach ($matches as $plugin) {
+            if (strcmp($plugin[1], $this->cfg['firstplugin']) < 0) continue;
+            if (!$this->info[$plugin[1]]) continue;
+            $this->info[$plugin[1]]['popularity_old'] = $plugin[3];
             if ($this->cfg['lastplugin'] && (strcmp($plugin[1], $this->cfg['lastplugin']) >= 0)) break;
         }
     }
@@ -160,16 +210,21 @@ class pg_dokuwikiwebexaminer extends pg_gardener {
     }
 
     function _readabilityIndex($plugin, $page) {
-        $page = explode('<p>'.DOKU_LF, $page, 2);
+        $page = explode('<ul id="pluginrepo__foldout">', $page, 2);
+        $page = explode('</ul>', $page[1], 2);
         $page = explode('<!-- wikipage stop -->', $page[1]);
-        $page = preg_replace('!</(li|h[1-5])>!i','. ',$page[0]); //make sentences from those tags
+        $page = preg_replace('/<pre .*?<\/pre>/s','',$page[0]); //remove code blocks
+        $page = preg_replace('!</(li|h[1-5])>!i','. ',$page); //make sentences from those tags
         $page = strip_tags($page);
-        $this->info[$plugin]['pagesize'] = strlen($page);
+        $this->info[$plugin]['textsize'] = strlen($page);
 
         // calc readability
-        $this->info[$plugin]['readbility_gf'] = gunning_fog_score($page);
-        $this->info[$plugin]['readbility_fs'] = sprintf('%.f2', calculate_flesch($page));
-        $this->info[$plugin]['readbility_fg'] = sprintf('%.f2', calculate_flesch_grade($page));
+        if ($this->cfg['fasteval']) return;
+
+        $statistics = new TextStatistics('utf8');
+        $this->info[$plugin]['readability_gf'] = $statistics->gunning_fog_score($page);
+        $this->info[$plugin]['readability_fs'] = $statistics->flesch_kincaid_reading_ease($page);
+        $this->info[$plugin]['readability_sm'] = $statistics->smog_index($page);
     }
 
     // HOMEPAGE
@@ -182,13 +237,11 @@ class pg_dokuwikiwebexaminer extends pg_gardener {
         $page = explode('<!-- wikipage start -->', $markup);
         $page = explode('bar__bottom', $page[1]);
         $page = $page[0];
+        $this->info[$plugin]['pagesize'] = strlen($page);
         $this->_readabilityIndex($plugin, $page);
 
         preg_match_all('/by <a ([^>]+(mailto:[^>]+)"[^>]+)\>(.*?)\<\/a\>/', $page, $matches);
         $this->info[$plugin]['developer'] = $matches[3][0];
-
-        preg_match_all('/\<span class="compatible"\>Compatible with \<em\>(.*?)\<\/em\>/', $page, $matches);
-        $this->info[$plugin]['compability'] = $matches[1][0];
 
         if (preg_match('/\<span class="conflicts"\>Conflicts with \<em\>(.*?)\<\/em\>/', $page, $match)) {
             preg_match_all('/\/plugin:([-.\w]*)/', $match[1], $matches);
@@ -199,7 +252,7 @@ class pg_dokuwikiwebexaminer extends pg_gardener {
         $this->info[$plugin]['pagemodified'] = str_replace('/', '-', $matches[1][0]);
 
         preg_match_all('/\<span class="lastupd">Last updated on \<em\>(.*?)\<\/em\>/', $page, $matches);
-        $this->info[$plugin]['lastmodified'] = $matches[1][0];
+        $this->info[$plugin]['lastupdate'] = $matches[1][0];
 
         if (preg_match('/&lt;\?php/', $page, $matches)) { // TODO: enhance for better match and count size and number of divs
             $this->info[$plugin]['code'] = 'yes';
@@ -208,25 +261,29 @@ class pg_dokuwikiwebexaminer extends pg_gardener {
         preg_match_all('/img src="\/lib\/exe\/fetch\.php/', $page, $matches);
         $this->info[$plugin]['homepageimage'] = count($matches[0]);
 
-        if (preg_match('/class="security.*?\<i\>(.*?)\<\/i\>/', $page, $matches)) {
+        if (preg_match('/class="security".*?\<i\>(.*?)\<\/i\>/', $page, $matches)) {
             $this->info[$plugin]['security'] = $matches[1];
         }
 
+        if (preg_match('/class="securitywarning".*?\<i\>(.*?)\<\/i\>/', $page, $matches)) {
+            $this->info[$plugin]['security_w'] = $matches[1];
+        }
+
         if (preg_match('/class="download" href="(.*?)"\>/', $page, $matches)) {
-            $this->info[$plugin]['maindownload'] = $matches[1];
+            $this->info[$plugin]['downloadbutton'] = $matches[1];
             $this->info[$plugin]['download'][] = $matches[1];
         }
 
         if (preg_match('/class="repo" href="(.*?)"\>/', $page, $matches)) {
-            $this->info[$plugin]['repo'] = $matches[1];
+            $this->info[$plugin]['repobutton'] = $matches[1];
         }
 
         if (preg_match('/class="bugs" href="(.*?)"\>/', $page, $matches)) {
-            $this->info[$plugin]['bugs'] = $matches[1];
+            $this->info[$plugin]['bugsbutton'] = $matches[1];
         }
 
         if (preg_match('/class="donate" href="(.*?)"\>/', $page, $matches)) {
-            $this->info[$plugin]['donate'] = $matches[1];
+            $this->info[$plugin]['donatebutton'] = $matches[1];
         }
 
         if (preg_match('/\/devel:develonly/', $page)) {
@@ -294,6 +351,9 @@ class pg_dokuwikiwebexaminer extends pg_gardener {
             $url = str_replace('%2F','/',str_replace('%3A',':',$url));
             $this->info[$plugin]['download'][] = $url;
             return true;
+        } elseif (preg_match('/http:\/\/github.com\/.*?ball/i',$url)) {
+            $this->info[$plugin]['download'][] = $url;
+            return true;
         }
         return false;
     }
@@ -301,7 +361,7 @@ class pg_dokuwikiwebexaminer extends pg_gardener {
     function _examineExternalHomepages() {
         $localdir = $this->cfg['localdir'];
         // read whitelist of allowed external links
-        $allowedpages = array();
+/*        $allowedpages = array();
         $text = file_get_contents($localdir.'externalpages_ok.txt');
         preg_match_all('/^([^\t]+)\t([^\t]+)\t/m', $text ,$matches, PREG_SET_ORDER);
         foreach ($matches as $match) {
@@ -322,6 +382,34 @@ class pg_dokuwikiwebexaminer extends pg_gardener {
             }
         }
         fclose($fp);
+*/
+        $external_fn = $localdir.'externalpages.txt';
+        $externalpages = array();
+        $checkpages = array();
+        if (file_exists($external_fn)) {
+            $externalpages = unserialize(file_get_contents($external_fn));
+        }
+
+        foreach ($this->info as $name => $plugin) {
+            if ((!$plugin['downloadbutton'] || $plugin['textsize'] < 250) && $plugin['links']) {
+                $externalpages[$name]['links'] = $plugin['links'];
+                $plugin['externalpage'] = 'maybe';
+                $selectedUrlvalid = false;
+                foreach ($plugin['links'] as $link) {
+                    if ($link[0] == $externalpages[$name]['selected']) {
+                        $selectedUrlvalid = true;
+                    }
+                }
+                if (!$selectedUrlvalid) {
+                    $externalpages[$name]['selected'] = '';
+                } else {
+                    $checkpages[$name] = $externalpages[$name]['selected'];
+                }
+            } else {
+                unset($externalpages[$name]);
+            }
+        }
+        file_put_contents($external_fn, serialize($externalpages));
         echo "<li>List of external pages created</li><ul>\n";
 
         // download every page and examine

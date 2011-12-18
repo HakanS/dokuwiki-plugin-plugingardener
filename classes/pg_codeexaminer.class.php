@@ -34,18 +34,39 @@ $ii = 0;
                 }
             }
 
+            if (!$this->info[$plugin]['downloadexamined']) {
+                $this->info[$plugin]['downloadexamined'] = 'unavailable';
+            }
+
+            if (file_exists($plugindir.'url.txt')) {
+                if (file_get_contents($plugindir.'url.txt') == $this->info[$plugin]['downloadbutton']) {
+                    $this->info[$plugin]['downloadstyle'] = 'Main URL';
+                } else {
+                    $this->info[$plugin]['downloadstyle'] = 'Other URL';
+                }
+            } elseif (file_exists($plugindir.$plugin.'/extracted__code__block.php') || file_exists($plugindir.$plugin.'/code.php')) {
+                $this->info[$plugin]['downloadstyle'] = 'Code Block';
+
+            } elseif ($this->info[$plugin]['downloadexamined'] == 'yes') {
+                $this->info[$plugin]['downloadstyle'] = 'Manual Download';
+
+            } elseif (file_exists($plugindir)) {
+                $this->info[$plugin]['downloadstyle'] = 'Download Blocked';
+            }
+            
+            if ($this->info[$plugin]['plugin']) {
+                foreach ($this->info[$plugin]['plugin'] as $class_name => $module) {
+                    if ($module['type']) {
+                        $this->info[$plugin]['t_'.$module['type']] = 'yes'; 
+                    }
+                }
+            }
+
             $mtime = microtime();
             $mtime = explode(" ", $mtime);
             $mtime = $mtime[1] + $mtime[0];
             $endtime = $mtime;
             $this->info[$plugin]['time'] = str_replace('.', ',', ($endtime - $starttime));
-
-            if (file_exists($plugindir.$plugin.'/code.php')) {
-                $this->info[$plugin]['downloadexamined'] = 'codeblock';
-
-            } elseif (!file_exists($plugindir.'url.txt') && $this->info[$plugin]['downloadexamined']) {
-                $this->info[$plugin]['manualdownload'] = 'manual';
-            }
         }
 
         echo "<li>Done</li></ul>";
@@ -128,7 +149,8 @@ $ii = 0;
     function _examine_lang($plugin,$langdir) {
         $dir = dir($langdir);
         while (($file = $dir->read()) != false) {
-            if ($file != '.' && $file != '..') {
+            if (strpos($file,'.') === false) {
+//            if ($file != '.' && $file != '..') {
                 $this->info[$plugin]['lang'][] = $file;
             }
         }
@@ -140,11 +162,11 @@ $ii = 0;
         $markup = file_get_contents($file);
 
         // plugin type and name
-        $infos = io_grep($file,'/(?<=class )\w*(?=_plugin)/',0,true);
-        $classtype = $infos[0][0];
+        $infos = io_grep($file,'/(?<=class )\s*\w*(?=_plugin)/i',0,true);
+        $classtype = trim($infos[0][0]);
         if (!$classtype) return;
 
-        $infos = io_grep($file,'/(?<=_plugin_)\w*(?= extends)/',0,true);
+        $infos = io_grep($file,'/(?<=_plugin_)\w*(?= extends)/i',0,true);
         $classname = $infos[0][0];
         $class = $classtype . '_' . $classname;
 
@@ -163,12 +185,6 @@ $ii = 0;
         $this->info[$plugin]['plugin'][$class]['regexp_entry'] = $matches[1];
         preg_match_all('/Lexer->addExitPattern\(\s*(.*?)\s*,\s*\'plugin/',$markup,$matches);
         $this->info[$plugin]['plugin'][$class]['regexp_exit'] = $matches[1];
-
-        // conftohash
-        if (preg_match('/confToHash/',$markup))
-            $this->info[$plugin]['conftohash'] = 'yes';
-        if (preg_match('/date[^=]+=>[^f]+file_get_contents/',$markup))
-            $this->info[$plugin]['version'] = 'yes';
         
         if (preg_match('/function canRender/',$markup))
             $this->info[$plugin]['canRender'] = 'yes';
@@ -179,10 +195,20 @@ $ii = 0;
         if (preg_match('/dformat/',$markup))
             $this->info[$plugin]['dformat'] = 'yes';
 
+        if (preg_match('/\$ACT\s*==\s*\'save\'/i',$markup))
+            $this->info[$plugin]['save_on_act'] = 'yes';
+
+        if (preg_match('/private\s+function/i',$markup))
+            $this->info[$plugin]['php5'] = 'yes';
+
         // registered event handlers
-        $infos = io_grep($file,'/(?<=->register_hook\(\x27)[A-Z_]*/',0,true);
-        foreach ($infos as $info)
-            $this->info[$plugin]['plugin'][$class]['events'][] = $info[0];
+        preg_match_all('/->register_hook\(\s*\'([A-Z_]*)/s',$markup,$matches,PREG_SET_ORDER);
+        foreach ($matches as $info) {
+            $this->info[$plugin]['plugin'][$class]['events'][] = $info[1];
+            if (!$this->info[$plugin]['events'] || !in_array($info[1], $this->info[$plugin]['events'])) {
+                $this->info[$plugin]['events'][] = $info[1];
+            }
+        }
     }
 
 	// JAVA-CODE and LINT (from http://www.jslint.com/wsh/index.html)
@@ -194,6 +220,9 @@ $ii = 0;
         }
         if (preg_match('/toolbar\[/', $js)) {
             $this->info[$plugin]['javatoolbar'] = 'yes';
+        }
+        if (preg_match('/jQuery\(/', $js)) {
+            $this->info[$plugin]['jquery'] = 'yes';
         }
         if (preg_match('/\(\'tool__bar\'\)/', $js)) {
             $this->info[$plugin]['javatoolbar'] = 'dynamic';
