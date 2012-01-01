@@ -815,7 +815,7 @@ class pg_reportwriter extends pg_gardener {
         $newdeveloper = array();
         foreach ($this->info as $name => $plugin) {
             $devname = str_replace('&#039;','"',htmlspecialchars_decode($plugin['developer']));
-            $devname = str_replace(',',' &',$devname);
+            $devname = ucwords(str_replace(',',' &',$devname));
             $newdeveloper[] = $devname;
             $developer[$devname]['developer'] = $devname;
             $developer[$devname]['plugins'][] = $name;
