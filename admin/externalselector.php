@@ -5,14 +5,14 @@
  * !!! edits has been done in php.ini to allow_url_fopen !!!
  *
  * @license    GPL 2 (http://www.gnu.org/licenses/gpl.html)
- * @author     Håkan Sandell <hakan.sandell@home.se>
+ * @author     Hï¿½kan Sandell <hakan.sandell@home.se>
  */
 
- // must be run within Dokuwiki
+// must be run within Dokuwiki
 if(!defined('DOKU_INC')) die();
 
-if(!defined('DOKU_PLUGIN')) 
-    define('DOKU_PLUGIN',DOKU_INC.'lib/plugins/');
+if(!defined('DOKU_PLUGIN'))
+    define('DOKU_PLUGIN', DOKU_INC.'lib/plugins/');
 
 /**
  * All DokuWiki plugins to extend the admin function
@@ -27,27 +27,27 @@ class admin_plugin_plugingardener_externalselector extends DokuWiki_Admin_Plugin
     }
 
     function handle() {
- 
+
         $external_fn = 'C:/DokuWikiStickNew/tmp2011/externalpages.txt';
-        if (file_exists($external_fn)) {
+        if(file_exists($external_fn)) {
             $this->externalpages = unserialize(file_get_contents($external_fn));
         }
 
-        if ($_REQUEST['cmd'] = 'save') {
-            if (!checkSecurityToken()) return;
+        if($_REQUEST['cmd'] = 'save') {
+            if(!checkSecurityToken()) return;
 
-            foreach ($this->externalpages as $plugin => $external) {
-                if ($_REQUEST['file'][$plugin]) {
-                    $sel = $_REQUEST['file'][$plugin][0];
+            foreach($this->externalpages as $plugin => $external) {
+                if($_REQUEST['file'][$plugin]) {
+                    $sel                                      = $_REQUEST['file'][$plugin][0];
                     $this->externalpages[$plugin]['selected'] = $external['links'][$sel][0];
                 } else {
                     $this->externalpages[$plugin]['selected'] = '';
                 }
             }
             file_put_contents($external_fn, serialize($this->externalpages));
-        }      
+        }
     }
- 
+
     /**
      * output appropriate html
      */
@@ -61,26 +61,26 @@ class admin_plugin_plugingardener_externalselector extends DokuWiki_Admin_Plugin
 
         ptln('<table class="inline">');
         $oddeven = 0;
-        foreach ($this->externalpages as $plugin => $external) {
+        foreach($this->externalpages as $plugin => $external) {
             $rowspan = count($external['links']);
             $oddeven++;
             $fileItr = 0;
-            foreach ($external['links'] as $link) {
-                if ($oddeven % 2 == 0) {
+            foreach($external['links'] as $link) {
+                if($oddeven % 2 == 0) {
                     echo '<tr>';
                 } else {
                     echo '<tr style="background-color:#ddd;">';
                 }
-                if ($rowspan > 1) {
+                if($rowspan > 1) {
                     echo '<td rowspan="'.$rowspan.'">'.$this->echolink($plugin).'</td>';
                     $rowspan = 0;
-                } elseif ($rowspan == 1) {
+                } elseif($rowspan == 1) {
                     echo '<td>'.$this->echolink($plugin).'</td>';
                 }
                 echo '<td><a href="'.$link[0].'">'.$link[0].'</a></td>';
                 echo '<td><b>'.$link[1].'</b></td>';
                 echo '<td>';
-                if ($link[0] == $external['selected']) {
+                if($link[0] == $external['selected']) {
                     $checked = 'checked';
                 } else {
                     $checked = '';
