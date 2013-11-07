@@ -2,9 +2,15 @@
 
 require_once(DOKU_PLUGIN.'/plugingardener/classes/pg_stats.class.php');
 
+/**
+ * Class pg_reportwriter
+ */
 class pg_reportwriter extends pg_gardener {
 
-    function execute() {
+    /**
+     * @return bool|void
+     */
+    public function execute() {
         echo "<h4>ReportWriter</h4>\n";
         echo "<ul>";
         $localoutputdir = $this->cfg['localdir'].'output/';
@@ -39,8 +45,11 @@ class pg_reportwriter extends pg_gardener {
         return true;
     }
 
-
-    function _export_summary($localoutputdir, $s) {
+    /**
+     * @param string $localoutputdir
+     * @param pg_stats $s
+     */
+    private function _export_summary($localoutputdir, $s) {
 
         $resultFile = $localoutputdir.'summary.txt';
         echo "<li>$resultFile</li>";
@@ -57,7 +66,7 @@ class pg_reportwriter extends pg_gardener {
         fwrite($fp,$s->cnt('$info["downloadexamined"] == "yes"')." downloaded and parsed.\n");
         fwrite($fp,"\n");
         fwrite($fp,($s->total - $this->cfg['previousYearTotal'])." new plugins has been released since previous survey in september 2010 giving a groowth figure of ");
-        fwrite($fp,round($s->total/$this->cfg['previousYearTotal']*100-100) ."% a year.\n");
+        fwrite($fp, ($s->percentage($s->total, $this->cfg['previousYearTotal']) - 100) ."% a year.\n");
         fwrite($fp,"\n");
         fwrite($fp,"^Year ^Plugins ^\n");
         fwrite($fp,"| 2009 |  539|\n");
@@ -78,7 +87,11 @@ class pg_reportwriter extends pg_gardener {
         fclose($fp);
     }
 
-    function _export_deployment($localoutputdir, $s) {
+    /**
+     * @param string $localoutputdir
+     * @param pg_stats $s
+     */
+    private function _export_deployment($localoutputdir, $s) {
 
         $resultFile = $localoutputdir.'deployment.txt';
         echo "<li>$resultFile</li>";
@@ -116,7 +129,7 @@ class pg_reportwriter extends pg_gardener {
         fwrite($fp,"Previous year 126 plugins where avaliable at [[http://www.github.com|GitHub]]. ");
         $github = $s->count('preg_match("/github/i",$info["download"][0])');
         fwrite($fp,"Now ".$s->cnt('preg_match("/github/i",$info["download"][0])')." are located on GitHub.\n");
-        fwrite($fp,"This accounts for ". round($github/$s->count('$info["download"]')*100) ."% of the plugins with download link.\n");
+        fwrite($fp,"This accounts for ". $s->percentage($github, $s->count('$info["download"]')) ."% of the plugins with download link.\n");
         fwrite($fp,"\n");
         fwrite($fp,"^Year ^ Plugins@GitHub ^\n");
         fwrite($fp,"|  2009  |  22  |\n");
@@ -138,7 +151,7 @@ class pg_reportwriter extends pg_gardener {
         fwrite($fp,"=== plugin.info.txt ===\n");
         fwrite($fp,"Plugins are no longer required to implement a getInfo() function used by the [[plugin:plugin|plugin manager]].\n");
         fwrite($fp,"Since DokuWiki 2009-12-25 release they may instead add an ''plugin.info.txt'' file. This adds better protection against download packages with faulty folder names.\n");
-        fwrite($fp,"Now ".round($s->count('$info["plugininfotxt"]')/$downloadpackage*100)."% of the plugins with download packages includes this file.\n");
+        fwrite($fp,"Now ".$s->percentage($s->count('$info["plugininfotxt"]'), $downloadpackage)."% of the plugins with download packages includes this file.\n");
         fwrite($fp,"\n");
         fwrite($fp,"^ Survey ^ Plugins ^\n");
         fwrite($fp,"|  2010  |  94  |\n");
@@ -164,7 +177,11 @@ class pg_reportwriter extends pg_gardener {
         fclose($fp);
     }
 
-    function _export_compatibility($localoutputdir, $s) {
+    /**
+     * @param string $localoutputdir
+     * @param pg_stats $s
+     */
+    private function _export_compatibility($localoutputdir, $s) {
 
         $lastyear = date('Y-m-d', mktime(0, 0, 0, date("m"), date("d"), date("Y")-1));
         $releases = array('2011-11-10', '2011-05-25', '2010-11-07', '2009-12-25', '2009-02-14', '2008-05-05', '2007-06-26', '2006-11-06');
@@ -254,6 +271,7 @@ class pg_reportwriter extends pg_gardener {
         fwrite($fp,"Sharing class names with another plugin might cause problems. PHP don't allow a class being declared more than once\n");
         fwrite($fp,"\n");
 
+        $nameconflict = array();
         foreach ($this->info as $name => $info) {
             if (!$info['plugin']) continue;
             foreach ($info['plugin'] as $module) {
@@ -387,7 +405,11 @@ class pg_reportwriter extends pg_gardener {
         fclose($fp);
     }
 
-    function _export_codestyle($localoutputdir, $s) {
+    /**
+     * @param string $localoutputdir
+     * @param pg_stats $s
+     */
+    private function _export_codestyle($localoutputdir, $s) {
 
         // !!! changing "total" to make percentage against number of examined !!!
         $downloadexamined = $s->count('$info["downloadexamined"] == "yes"');
@@ -426,7 +448,7 @@ class pg_reportwriter extends pg_gardener {
         fwrite($fp,"=== PHP5 ===\n");
         fwrite($fp,"Since the 2009-12-25c \"Lemming\" release DokuWiki requires PHP version 5.1.2 which supports object oriented concepts like visibility (public, private, inherit) etc. \n");
         fwrite($fp,"Technically plugins now could be written in this style but only ".$s->cnt('$info["php5"]')." is found by looking for 'private function'.\n");
-        fwrite($fp,"But in the population of new plugins there are more than ".round($s->count('$info["php5"] && $info["new"]')/max(1,$s->count('$info["new"]'))*100)."% written in PHP 5.\n");
+        fwrite($fp,"But in the population of new plugins there are more than ".$s->percentage($s->count('$info["php5"] && $info["new"]'), $s->count('$info["new"]')) ."% written in PHP 5.\n");
         fwrite($fp,"\n");
 
         fwrite($fp,"=== Saving data on action SAVE ===\n");
@@ -444,7 +466,7 @@ class pg_reportwriter extends pg_gardener {
         $syntaxplugins = $s->count('$info["t_syntax"]');
         fwrite($fp,"Together with those using PHP event they represent x% of the $syntaxplugins syntax plugins.\n");
         fwrite($fp,"\n");
-        fwrite($fp,$s->cnt('$info["javatoolbar"] == "yes"')." are using the static data method accessing ''toolbar[…]''\n");
+        fwrite($fp,$s->cnt('$info["javatoolbar"] == "yes"')." are using the static data method accessing ''toolbar[ï¿½]''\n");
         fwrite($fp,$s->plugins('$info["javatoolbar"] == "yes"'));
         fwrite($fp,"\n");
         fwrite($fp,$s->cnt('$info["javatoolbar"] == "dynamic"')." are using dynamic method based on ''getElementById('tool%%__%%bar')'' or ''jQuery('tool%%__%%bar')''\n");
@@ -551,7 +573,11 @@ class pg_reportwriter extends pg_gardener {
         $s->total = count($this->info);
     }
 
-    function _export_events($localoutputdir, $s) {
+    /**
+     * @param string $localoutputdir
+     * @param pg_stats $s
+     */
+    private function _export_events($localoutputdir, $s) {
         $resultFile = $localoutputdir.'events.txt';
         echo "<li>$resultFile</li>";
         $fp = fopen($resultFile, 'w');
@@ -567,10 +593,11 @@ class pg_reportwriter extends pg_gardener {
             foreach ($info['plugin'] as $module) {
                 if (!$module['events']) continue;
                 $eventplugins[] = $name;
-                if ($module['type'] != 'action') {
-                    $notaction[$event][] = $name;
-                }
+
                 foreach ($module['events'] as $event) {
+                    if ($module['type'] != 'action') {
+                        $notaction[$event][] = $name;
+                    }
                     if (!$eventlist[$event]['plugins'] || !in_array($name, $eventlist[$event]['plugins'])) {
                         $eventlist[$event]['plugins'][] = $name;
                         if (!$eventlist[$event]['url']) {
@@ -584,7 +611,7 @@ class pg_reportwriter extends pg_gardener {
         $used_events = array_filter($eventlist, create_function('$a','return $a["plugins"];'));
 
         fwrite($fp,"A survey of DokuWiki plugins would not be complete without answering \"Who uses this Event?\" The [[devel:events|event system]] allows custom handling in addition to or instead of the standard processing. ");
-        fwrite($fp,"In the analyzed code there are ".count($eventplugins)." plugins (".round(count($eventplugins)/$s->total*100)."% of all plugins) using ".count($used_events)." different events.\n");
+        fwrite($fp,"In the analyzed code there are ".count($eventplugins)." plugins (" . $s->percentage(count($eventplugins), $s->total) . "% of all plugins) using ".count($used_events)." different events.\n");
 
         uasort($eventlist, create_function('$a, $b','return count($a["plugins"]) < count($b["plugins"]);'));
         fwrite($fp,"\n");
@@ -652,7 +679,11 @@ class pg_reportwriter extends pg_gardener {
         fclose($fp);
     }
 
-    function _export_friendliness($localoutputdir, $s) {
+    /**
+     * @param string $localoutputdir
+     * @param pg_stats $s
+     */
+    private function _export_friendliness($localoutputdir, $s) {
         $resultFile = $localoutputdir.'friendliness.txt';
         echo "<li>$resultFile</li>";
         $fp = fopen($resultFile, 'w');
@@ -688,7 +719,7 @@ class pg_reportwriter extends pg_gardener {
         fwrite($fp,"\n");
 
         fwrite($fp,"=== Homepage size ===\n");
-        fwrite($fp,"There are at least ".$s->count('$info["textsize"] < 1000',null,'Small homepage')." plugin homepages that could be considered thin, most contain only a “Details & Download” link. \n");
+        fwrite($fp,"There are at least ".$s->count('$info["textsize"] < 1000',null,'Small homepage')." plugin homepages that could be considered thin, most contain only a ï¿½Details & Downloadï¿½ link. \n");
         fwrite($fp,"The following ".$s->count('$info["pagesize"] > 100000','Need to cleanup plugin homepage')." plugins represent the other extreme having the largest pages with lots of <code> blocks and comments. They are in a desperate need of cleanup. \n");
         fwrite($fp,$s->plugins('$info["pagesize"] > 100000'));
         fwrite($fp,"\n");
@@ -703,7 +734,7 @@ class pg_reportwriter extends pg_gardener {
         fwrite($fp,"| >= 12 | ".$s->cnt('$info["readability_gf"] >= 12')." |Hard to understand |\n");
         fwrite($fp,$s->plugins('$info["readability_gf"] >= 12'));
         fwrite($fp,"\n");
-        fwrite($fp,"An alternative measure is the [[wp>Flesch–Kincaid Readability Test|Flesch Reading Ease]] score, higher scores indicate material that is easier to read. ");
+        fwrite($fp,"An alternative measure is the [[wp>Fleschï¿½Kincaid Readability Test|Flesch Reading Ease]] score, higher scores indicate material that is easier to read. ");
         fwrite($fp,"The median score is ".$s->median('$info["readability_fs"]').".\n");
         fwrite($fp,"\n");
         fwrite($fp,"^Flesh score ^ Plugins ^ ^\n");
@@ -722,8 +753,8 @@ class pg_reportwriter extends pg_gardener {
         fwrite($fp,"=== Images ===\n");
         $havingimage = '$info["homepageimage"] && ($info["t_syntax"] || $info["t_admin"])';
         $maxpopulation = $s->count('$info["t_syntax"] || $info["t_admin"]');
-        fwrite($fp,"\"A picture is worth a thousand words\" –- Only ");
-        fwrite($fp,$s->count($havingimage)." (".round($s->count($havingimage)/max(1,$maxpopulation)*100)."%) of the syntax and admin plugin homepages have one or more images showing the plugin in action on their homepage. This is a great way to explain complicated stuff. \n");
+        fwrite($fp,"\"A picture is worth a thousand words\" ï¿½- Only ");
+        fwrite($fp,$s->count($havingimage)." (".$s->percentage($s->count($havingimage), $maxpopulation)."%) of the syntax and admin plugin homepages have one or more images showing the plugin in action on their homepage. This is a great way to explain complicated stuff. \n");
         fwrite($fp,"\n");
 
         fwrite($fp,"=== Devel & experimental ===\n");
@@ -768,6 +799,7 @@ class pg_reportwriter extends pg_gardener {
         fwrite($fp,"this feature was found in approximately ".$s->cnt('$info["lang"]')." of the plugins. ");
         fwrite($fp,"Compared to the 60 languages included in the DokuWiki 2011-05-25 release, \n");
         fwrite($fp,"\n");
+        $langs = array();
         foreach ($this->info as $name => $info) {
             if ($info['lang']) {
 				foreach ($info['lang'] as $lang) {
@@ -793,7 +825,18 @@ class pg_reportwriter extends pg_gardener {
         fclose($fp);
     }
 
-    function _export_developers($localoutputdir, $s) {
+    /**
+     * @param string $localoutputdir
+     * @param pg_stats $s
+     */
+    private function _export_developers($localoutputdir, $s) {
+        /**
+         * Sort by number of plugins, next by name of developer
+         *
+         * @param array $a plugin info
+         * @param array $b plugin info
+         * @return int smaller, equal or larger than zero
+         */
         function sortdevplugins_callback($a, $b) {
             if (count($a['plugins']) == count($b['plugins'])) {
                 return strcasecmp($a['developer'], $b['developer']);
@@ -801,6 +844,13 @@ class pg_reportwriter extends pg_gardener {
             return (count($a['plugins']) > count($b['plugins'])) ? -1 : 1;
         }
 
+        /**
+         * Sort by popularity of plugin, next by name of developer
+         *
+         * @param $a
+         * @param $b
+         * @return int
+         */
         function sortpopularity_callback($a, $b) {
             if ($a['popularity'] == $b['popularity']) {;
                 return strcasecmp($a['developer'], $b['developer']);
@@ -823,6 +873,8 @@ class pg_reportwriter extends pg_gardener {
         }
         unset($developer['']);
         uasort($developer, "sortdevplugins_callback");
+        $i = 0;
+        $topcontrib = 0;
         foreach ($developer as $name => $dev) {
             if ($i++ >= 10) break;
             $topcontrib += count($dev['plugins']);
@@ -840,8 +892,8 @@ class pg_reportwriter extends pg_gardener {
         fwrite($fp,"===== Plugin Survey ".date('Y')." - Developers =====\n");
         fwrite($fp,"It must be easy to write a plugin, or at least very fun ;-). ");
         fwrite($fp,"There are ".count($developer)." (last year 333) different developers which is almost exactly ".round($s->total/count($developer),1)." plugins/developer");
-        fwrite($fp,"in the [[start|survey]] but the wast majority (".round($singleplugindevs/count($developer)*100)."%) of the developers are single plugin authors. Our top ten most productive developers has written $topcontrib plugins together. \n");
-        fwrite($fp,"They have become a little less influential, as this is only ".round($topcontrib/$s->total*100)."% of the total number of plugins, compared to previous survey when they had written 26% of all plugins.\n");
+        fwrite($fp,"in the [[start|survey]] but the wast majority (".$s->percentage($singleplugindevs, count($developer))."%) of the developers are single plugin authors. Our top ten most productive developers has written $topcontrib plugins together. \n");
+        fwrite($fp,"They have become a little less influential, as this is only ".$s->percentage($topcontrib, $s->total)."% of the total number of plugins, compared to previous survey when they had written 26% of all plugins.\n");
         fwrite($fp,"\n");
 
         fwrite($fp,"We welcome these ".count($newdeveloper)." new plugin authors.\n");
@@ -879,8 +931,8 @@ class pg_reportwriter extends pg_gardener {
         fwrite($fp,"^ ^Developer ^Popularity  ^Plugins ^\n");
         uasort($developer, "sortpopularity_callback");
         $i = 1;
-        $place = 1;
         $previouspop = -1;
+        $lowpop = 0;
         foreach ($developer as $name => $dev) {
             if ($dev['popularity'] < 2) {
                 $lowpop++;
@@ -910,7 +962,11 @@ class pg_reportwriter extends pg_gardener {
         fclose($fp);
     }
 
-    function _export_trackedDevErrors($localoutputdir, $s) {
+    /**
+     * @param string $localoutputdir
+     * @param pg_stats $s
+     */
+    private function _export_trackedDevErrors($localoutputdir, $s) {
         $resultFile = $localoutputdir.'trackedDevErrors.txt';
         echo "<li>$resultFile</li>";
         $fp = fopen($resultFile, 'w');
@@ -931,7 +987,11 @@ class pg_reportwriter extends pg_gardener {
         fclose($fp);
     }
 
-    function _export_teamtodolist($localoutputdir, $s) {
+    /**
+     * @param string $localoutputdir
+     * @param pg_stats $s
+     */
+    private function _export_teamtodolist($localoutputdir, $s) {
         $resultFile = $localoutputdir.'teamTodoList.txt';
         echo "<li>$resultFile</li>";
 
@@ -955,7 +1015,11 @@ class pg_reportwriter extends pg_gardener {
         fclose($fp);
     }
 
-    function _export_references($localoutputdir, $s) {
+    /**
+     * @param string $localoutputdir
+     * @param pg_stats $s
+     */
+    private function _export_references($localoutputdir, $s) {
         $resultFile = $localoutputdir.'references.txt';
         echo "<li>$resultFile</li>";
         $fp = fopen($resultFile, 'w');
@@ -967,7 +1031,11 @@ class pg_reportwriter extends pg_gardener {
         fclose($fp);
     }
 
-    function _export_csv($localoutputdir, $onlyplugin) {
+    /**
+     * @param string $localoutputdir
+     * @param bool $onlyplugin
+     */
+    private function _export_csv($localoutputdir, $onlyplugin) {
         if ($onlyplugin) {
             $resultFile = $localoutputdir.'plugin_gardener.csv';
         } else {

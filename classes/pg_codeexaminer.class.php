@@ -1,12 +1,21 @@
 <?php
+
+/**
+ * Class pg_codeexaminer
+ */
 class pg_codeexaminer extends pg_gardener {
 
-    function execute() {
+    /**
+     * Performs an examination
+     *
+     * @return bool|void
+     */
+    public function execute() {
 // indicate whether codeblock or download
         echo "<h4>Examine Code</h4>\n";
         echo "<ul>";
         $localpluginsdir = $this->cfg['localdir'].'plugins/';
-$ii = 0;
+        $ii = 0;
         foreach ($this->collections['plugins'] as $plugin) {
 //            if (in_array($plugin, array('swfobject','jquery'))) continue;
 
@@ -73,13 +82,15 @@ $ii = 0;
         return true;
     }
 
-    // DIRECTORY & CLOC
-    function _examine_plugin_dir($plugin, $plugindir, $runcloc=true) {
+    /**
+     * Examine directory & CLOC (=count lines of code)
+     */
+    private function _examine_plugin_dir($plugin, $plugindir) {
         $this->info[$plugin]['downloadexamined'] = 'yes';
-        echo "<li><a href=\"http://www.dokuwiki.org/plugin:$plugin\">$plugin</a> - $plugindir</li>\n";
+        echo "<li><a href=\"https://www.dokuwiki.org/plugin:$plugin\">$plugin</a> - $plugindir</li>\n";
 
         // CLOC code metrics
-        if ($runcloc && !$this->cfg['fasteval']) {
+        if ($this->cfg['cloc'] && !$this->cfg['fasteval']) {
             exec(dirname(__FILE__)."/../cloc.exe -no3 $plugindir", $result);
             $result = implode("\n", $result);
             if (preg_match('/PHP\s+(\d+)\s+\d+\s+(\d+)\s+(\d+)/i', $result, $match)) {
@@ -145,8 +156,13 @@ $ii = 0;
         $dir->close();
     }
 
-
-    function _examine_lang($plugin,$langdir) {
+    /**
+     * Language files
+     *
+     * @param $plugin
+     * @param $langdir
+     */
+    private function _examine_lang($plugin,$langdir) {
         $dir = dir($langdir);
         while (($file = $dir->read()) != false) {
             if (strpos($file,'.') === false) {
@@ -157,8 +173,13 @@ $ii = 0;
         $dir->close();
     }
 
-    // PHP-CODE
-    function _examine_php($plugin,$file) {
+    /**
+     * PHP-code
+     *
+     * @param $plugin
+     * @param $file
+     */
+    private function _examine_php($plugin,$file) {
         $markup = file_get_contents($file);
 
         // plugin type and name
@@ -177,6 +198,7 @@ $ii = 0;
         $infos = io_grep($file,'/(?<=\x27author\x27 => \x27)\w*(?=\x27)/',0,true);
         $this->info[$plugin]['plugin'][$class]['code_author'] = $infos[0][0];
         $infos = io_grep($file,'/(?<=\x27date\x27 => \x27)\w*(?=\x27)/',0,true);
+        $this->info[$plugin]['plugin'][$class]['code_date'] = $infos[0][0];
 
         // function connectTo
         preg_match_all('/Lexer->addSpecialPattern\(\s*(.*?)\s*,\s*\$/',$markup,$matches);
@@ -211,8 +233,14 @@ $ii = 0;
         }
     }
 
-	// JAVA-CODE and LINT (from http://www.jslint.com/wsh/index.html)
-    function _examine_javascript($plugin,$file) {
+    /**
+     *
+     * Javascript-code and LINT (from http://www.jslint.com/wsh/index.html)
+     *
+     * @param $plugin
+     * @param $file
+     */
+    private function _examine_javascript($plugin,$file) {
         $this->info[$plugin]['javascript'] = 'yes';
         $js = file_get_contents($file);
         if (preg_match('/DOKUWIKI:include/', $js)) {
@@ -230,7 +258,7 @@ $ii = 0;
         if (preg_match('/\.runAJAX\(/', $js)) {
             $this->info[$plugin]['java_ajax'] = 'yes';
         }
-		if ($this->info[$plugin]['java_lines'] > 800 || $this->cfg['fasteval'] || true) {
+		if ($this->info[$plugin]['java_lines'] > 800 || $this->cfg['fasteval'] || !$this->cfg['jslint']) {
 				$this->info[$plugin]['java_lint'] = 'skipped';
         } else {
 			$cmd = "cscript ".dirname(__FILE__)."\..\jslint.js";
@@ -258,9 +286,17 @@ $ii = 0;
 		}
     }
 
-// http://jigsaw.w3.org/css-validator/DOWNLOAD.html.en
-// http://www.codestyle.org/css/tools/W3C-CSS-Validator.shtml
-    function _examine_css($plugin,$file,$type) {
+    /**
+     * CSS
+     *
+     * http://jigsaw.w3.org/css-validator/DOWNLOAD.html.en
+     * http://www.codestyle.org/css/tools/W3C-CSS-Validator.shtml
+     *
+     * @param $plugin
+     * @param $file
+     * @param $type
+     */
+    private function _examine_css($plugin,$file,$type) {
         $this->info[$plugin]['css'] = 'yes';
         if ($type == 'print') {
             $this->info[$plugin]['cssprint'] = 'yes';
@@ -275,8 +311,13 @@ $ii = 0;
         }
     }
 
-
-    function _examine_conf($plugin,$confdir) {
+    /**
+     * Configuration
+     *
+     * @param $plugin
+     * @param $confdir
+     */
+    private function _examine_conf($plugin,$confdir) {
         $dir = dir($confdir);
         $conf = false;
         $meta = false;

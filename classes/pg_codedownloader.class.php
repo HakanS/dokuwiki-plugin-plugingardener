@@ -1,7 +1,16 @@
 <?php
+
+/**
+ * Class pg_codedownloader
+ *
+ * Download plugins code
+ */
 class pg_codedownloader extends pg_gardener {
 
-    function execute() {
+    /**
+     * Performs the downloads
+     */
+    public function execute() {
         echo "<h4>DownloadCode</h4>\n";
         echo "<ul>";
         
@@ -14,7 +23,7 @@ class pg_codedownloader extends pg_gardener {
             foreach ($this->collections['plugins'] as $plugin) {
                 set_time_limit(60);
 
-                echo "<li><a href=\"http://www.dokuwiki.org/plugin:$plugin\">$plugin</a></li><ul>\n";
+                echo "<li><a href=\"https://www.dokuwiki.org/plugin:$plugin\">$plugin</a></li><ul>\n";
                 if (!$this->_downloadPlugin($plugin, $localpluginsdir)) {
                     $this->_extractCodeBlock($plugin, $localpluginsdir);
                 }
@@ -26,8 +35,13 @@ class pg_codedownloader extends pg_gardener {
         echo "</ul>";
     }
 
-    // extract code from downloadable code block in plugin homepage
-    function _extractCodeBlock($plugin, $localpluginsdir) {
+    /**
+     * Extract code from downloadable code block in plugin homepage
+     *
+     * @param string $plugin plugin name
+     * @param string $localpluginsdir
+     */
+    private function _extractCodeBlock($plugin, $localpluginsdir) {
         $localpluginhomepage = $this->cfg['localdir'].'pages/'.$plugin.'.htm';
         $markup = file_get_contents($localpluginhomepage);
         if (preg_match_all('/<pre class="code[^&]+&lt;\?php.*?<\/pre>/s', $markup, $matches)) {
@@ -49,8 +63,16 @@ class pg_codedownloader extends pg_gardener {
         }
     }
 
-    function _downloadPlugin($plugin, $localpluginsdir) {
+    /**
+     *
+     *
+     * @param string $plugin plugin name
+     * @param string $localpluginsdir
+     * @return bool
+     */
+    private function _downloadPlugin($plugin, $localpluginsdir) {
         $plugindir = $localpluginsdir.$plugin.'/';
+
         if (file_exists($plugindir) && !file_exists($plugindir."$plugin/extracted__code__block.php") && !$this->cfg['overwrite']) return true;
 
         if ($this->info[$plugin]['bundled']) { // TODO check repo instead
@@ -77,10 +99,23 @@ class pg_codedownloader extends pg_gardener {
         return false;
     }
 
-    function _download_file($plugin, $url, $localpluginsdir) {
+    /**
+     * Download file
+     *
+     * @param string $plugin plugin name
+     * @param string $url download url
+     * @param $localpluginsdir
+     * @return bool
+     */
+    private function _download_file($plugin, $url, $localpluginsdir) {
     	if (!$url) return false;
+        $plugindir = $localpluginsdir.$plugin.'/';
         set_time_limit(5*60);
-        echo "<li><a href=\"$url\">$url</a> - ";
+        echo '<li><a href="'.$url.'">$url</a> - ';
+
+        $error = '';
+        $retval = true;
+
         $matches = array();
         if (!preg_match("/[^\/]*$/", $url, $matches) || !$matches[0]) {
             $error = 'badurl/slashes';
@@ -88,6 +123,7 @@ class pg_codedownloader extends pg_gardener {
         }
         $file = $matches[0];
 
+        $tmp = false;
         if (!$error && !($tmp = io_mktmpdir())) {
             $error = 'cant create tmp dir';
             $retval = false;
@@ -113,7 +149,7 @@ class pg_codedownloader extends pg_gardener {
         // move the folder(s) to lib/plugins/
         if (!$error) {
             // Ensure complete overwrite, flag already checked
-            $plugindir = $localpluginsdir.$plugin.'/';
+
             if (file_exists($plugindir)) {
                 $this->dir_delete($plugindir);
             }
@@ -131,7 +167,14 @@ class pg_codedownloader extends pg_gardener {
                 foreach($install as $item){
                     // where to install?
                     if($item['type'] == 'template'){
-                        $target = 'C:/DokuWikiStickNew/tmp/tpl/'.$plugin.'/'.$item['base'];
+                        $localtemplatesdir = $this->cfg['localdir'].'templates/';
+                        if (!file_exists($localtemplatesdir)) {
+                            mkdir($localtemplatesdir);
+                        }
+                        $templatedir = $localtemplatesdir.$plugin.'/';
+                        mkdir($templatedir, 0777, true);
+
+                        $target = $templatedir.$item['base'];
                     }else{
                         $target = $plugindir.$item['base'];
                     }
@@ -177,13 +220,15 @@ class pg_codedownloader extends pg_gardener {
      * When no items are found in 'new' the copy mechanism should fall back
      * the 'old' list.
      *
+     *  --> copied from plugin:plugin
+     *
      * @author Andreas Gohr <andi@splitbrain.org>
-     * @param arrayref $result - results are stored here
+     * @param array &$result - results are stored here
      * @param string $base - the temp directory where the package was unpacked to
      * @param string $dir - a subdirectory. do not set. used by recursion
      * @return bool - false on error
      */
-    function find_folders(&$result,$base,$dir=''){
+    private function find_folders(&$result,$base,$dir=''){
         $dh = @opendir("$base/$dir");
         if(!$dh) return false;
         while (false !== ($f = readdir($dh))) {
@@ -196,16 +241,16 @@ class pg_codedownloader extends pg_gardener {
                     $info['type'] = 'plugin';
                     $info['tmp']  = "$base/$dir";
                     $conf = confToHash("$base/$dir/$f");
-                    $info['base'] = basename($conf['base']);
-                    if(!$info['base']) $info['base'] = basename("$base/$dir");
+                    $info['base'] = utf8_basename($conf['base']);
+                    if(!$info['base']) $info['base'] = utf8_basename("$base/$dir");
                     $result['new'][] = $info;
                 }elseif($f == 'template.info.txt'){
                     $info = array();
                     $info['type'] = 'template';
                     $info['tmp']  = "$base/$dir";
                     $conf = confToHash("$base/$dir/$f");
-                    $info['base'] = basename($conf['base']);
-                    if(!$info['base']) $info['base'] = basename("$base/$dir");
+                    $info['base'] = utf8_basename($conf['base']);
+                    if(!$info['base']) $info['base'] = utf8_basename("$base/$dir");
                     $result['new'][] = $info;
                 }
             }else{
@@ -228,8 +273,14 @@ class pg_codedownloader extends pg_gardener {
      * Decompress a given file to the given target directory
      *
      * Determines the compression type from the file extension
+     *
+     *  --> copied from plugin:plugin
+     *
+     * @param string $file path to file
+     * @param string $target directory
+     * @return bool
      */
-    function decompress($file, $target) {
+    private function decompress($file, $target) {
         global $conf;
 
         // decompression library doesn't like target folders ending in "/"
@@ -239,31 +290,26 @@ class pg_codedownloader extends pg_gardener {
         if (in_array($ext, array('tar','bz','gz'))) {
             switch($ext){
                 case 'bz':
-                    $compress_type = TarLib::COMPRESS_BZIP;
+                    $compress_type = Tar::COMPRESS_BZIP;
                     break;
                 case 'gz':
-                    $compress_type = TarLib::COMPRESS_GZIP;
+                    $compress_type = Tar::COMPRESS_GZIP;
                     break;
                 default:
-                    $compress_type = TarLib::COMPRESS_NONE;
+                    $compress_type = Tar::COMPRESS_NONE;
             }
 
-            $tar = new TarLib($file, $compress_type);
-            if($tar->_initerror < 0){
+            $tar = new Tar();
+            try {
+                $tar->open($file, $compress_type);
+                $tar->extract($target);
+                return true;
+            }catch(Exception $e){
                 if($conf['allowdebug']){
-                    msg('TarLib Error: '.$tar->TarErrorStr($tar->_initerror),-1);
+                    msg('Tar Error: '.$e->getMessage().' ['.$e->getFile().':'.$e->getLine().']',-1);
                 }
                 return false;
             }
-            $ok = $tar->Extract(TarLib::FULL_ARCHIVE, $target, '', 0777);
-
-            if($ok<1){
-                if($conf['allowdebug']){
-                    msg('TarLib Error: '.$tar->TarErrorStr($ok),-1);
-                }
-                return false;
-            }
-            return true;
         } else if ($ext == 'zip') {
 
             $zip = new ZipLib();
@@ -284,10 +330,13 @@ class pg_codedownloader extends pg_gardener {
      * Reads the first magic bytes of the given file for content type guessing,
      * if neither bz, gz or zip are recognized, tar is assumed.
      *
+     *  --> copied from plugin:plugin
      * @author Andreas Gohr <andi@splitbrain.org>
-     * @returns false if the file can't be read, otherwise an "extension"
+     *
+     * @param string $file path to file
+     * @return boolean|string false if the file can't be read, otherwise an "extension"
      */
-    function guess_archive($file){
+    private function guess_archive($file){
         $fh = fopen($file,'rb');
         if(!$fh) return false;
         $magic = fread($fh,5);

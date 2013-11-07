@@ -2,6 +2,9 @@
 
 if(!defined('LF')) define('LF',"\n");
 
+/**
+ * Class pg_stats
+ */
 class pg_stats {
 
     public $total = 0;
@@ -9,12 +12,23 @@ class pg_stats {
     private $collections = null;
     private $cache = array();
 
-    function __construct(&$info, &$collections) {
+    /**
+     * @param array $info array with plugins
+     * @param array $collections
+     */
+    public function __construct(&$info, &$collections) {
         $this->info = &$info;
         $this->total = count($info);
         $this->collections = &$collections;
     }
 
+    /**
+     * Callback function
+     *
+     * @param $info
+     * @param $plugin
+     * @param $dev_error_msg
+     */
     private function checkDevError($info, $plugin, $dev_error_msg) {
         if (in_array(strtolower($info['developer']), $this->collections['trackedDevelopers'])) {
             if (!$this->collections['trackedDevErr'][$info['developer']][$dev_error_msg] || !in_array($plugin, $this->collections['trackedDevErr'][$info['developer']][$dev_error_msg])) {
@@ -23,6 +37,14 @@ class pg_stats {
         }
     }
 
+    /**
+     *
+     *
+     * @param $expression
+     * @param $dev_error_msg
+     * @param bool $addinfo
+     * @return array
+     */
     private function filter($expression, $dev_error_msg, $addinfo = false) {
         $retval = array();
 
@@ -42,11 +64,22 @@ class pg_stats {
         return $retval;
     }
 
-    function wiki_link($plugin) {
+    /**
+     * Wiki syntax of link to plugin wiki page
+     *
+     * @param $plugin
+     * @return string
+     */
+    public function wiki_link($plugin) {
         return "[[plugin:$plugin]]";
     }
 
-    function infos($expression, $dev_error_msg = null) {
+    /**
+     * @param $expression
+     * @param null $dev_error_msg
+     * @return mixed
+     */
+    public function infos($expression, $dev_error_msg = null) {
         $key = hsc(str_replace(' ','',$expression));
         if (!$cache[$key] || !$cache[$key]['infos'] || $dev_error_msg) {
             $cache[$key] = $this->filter($expression, $dev_error_msg, true);
@@ -54,7 +87,12 @@ class pg_stats {
         return $cache[$key]['infos'];
     }
 
-    function count($expression, $dev_error_msg = null) {
+    /**
+     * @param $expression
+     * @param null $dev_error_msg
+     * @return mixed
+     */
+    public function count($expression, $dev_error_msg = null) {
         $key = hsc(str_replace(' ','',$expression));
         if (!$cache[$key] || $dev_error_msg) {
             $cache[$key] = $this->filter($expression, $dev_error_msg);
@@ -62,25 +100,34 @@ class pg_stats {
         return $cache[$key]['cnt'];
     }
 
-    /*
-     *  returns "X plugins (Y%)"
+    /**
+     * returns "X plugins (Y%)"
+     *
+     * @param $expression
+     * @param null $format
+     * @param null $dev_error_msg
+     * @return string
      */
-    function cnt($expression, $format = null, $dev_error_msg = null) {
+    public function cnt($expression, $format = null, $dev_error_msg = null) {
         $key = hsc(str_replace(' ','',$expression));
         if (!$cache[$key] || $dev_error_msg) {
             $cache[$key] = $this->filter($expression, $dev_error_msg);
         }
         if ($format) {
-            return sprintf($format, (string)$cache[$key]['cnt'], '('.round($cache[$key]['cnt']/$this->total*100).'%)');
+            return sprintf($format, (string)$cache[$key]['cnt'], '('.$this->percentage($cache[$key]['cnt'], $this->total).'%)');
         } else {
-            return $cache[$key]['cnt'].' plugins ('.round($cache[$key]['cnt']/$this->total*100).'%)';
+            return $cache[$key]['cnt'].' plugins ('. $this->percentage($cache[$key]['cnt'], $this->total).'%)';
         }
     }
 
-    /*
-     *  returns list of links
+    /**
+     * returns list of links
+     *
+     * @param $expression
+     * @param null $dev_error_msg
+     * @return string
      */
-    function plugins($expression, $dev_error_msg = null) {
+    public function plugins($expression, $dev_error_msg = null) {
         $key = hsc(str_replace(' ','',$expression));
         if (!$cache[$key] || $dev_error_msg) {
             $cache[$key] = $this->filter($expression, $dev_error_msg);
@@ -88,7 +135,12 @@ class pg_stats {
         return $this->plugins_from_array($cache[$key]['plugins']);
     }
 
-    function plugins_from_array($plugins, $linksonly = false) {
+    /**
+     * @param $plugins
+     * @param bool $linksonly
+     * @return string
+     */
+    public function plugins_from_array($plugins, $linksonly = false) {
         if (count($plugins) == 0) {
             return '  * No plugins matched expression'.LF;
         } else {
@@ -101,12 +153,21 @@ class pg_stats {
         }
     }
 
-    /*
-     *  returns pivot table WITHOUT table header
+    /**
+     * returns pivot table WITHOUT table header
+     *
+     * @param $expression
+     * @param bool $showpercent
+     * @param bool $sortlinkcount
+     * @param bool $sortdesc
+     * @param null $num
+     * @param bool $showlinks
+     * @return string
      */
-    function pivot($expression, $showpercent = false, $sortlinkcount = false, $sortdesc = false, $num = null, $showlinks = false) {
+    public function pivot($expression, $showpercent = false, $sortlinkcount = false, $sortdesc = false, $num = null, $showlinks = false) {
         $result = array();
         $func = create_function('$info' , "return ($expression);");
+        $plugin_cnt = 0;
         foreach($this->info as $name => $info) {
             $key = $func($info);
             if (is_array($key)) {
@@ -138,11 +199,13 @@ class pg_stats {
                 ksort($result);
             }
         }
+        $retval = '';
+        $cnt = 0;
         foreach($result as $key => $links) {
             $retval .= '|  '.$key.'  |  ';
             $retval .= count($links);
             if ($showpercent) {
-                $retval .= ' ('.round(count($links)/$this->total*100).'%)';
+                $retval .= ' ('.$this->percentage(count($links), $this->total).'%)';
             }
             $retval .= ' | ';
             if ($showlinks) {
@@ -154,19 +217,26 @@ class pg_stats {
         $single = array_filter($result, create_function('$a' , 'return (count($a) == 1);'));
         $retval .= '-----------------------------------------------------------------------------'.LF;
         $retval .= '  Pivot generated '.count($result).' rows and contain '.$plugin_cnt.' plugins.'.LF;
-        $retval .= '  '.count($single).' rows ('.round(count($single)/count($result)*100).'%) contain only one plugin.'.LF;
+        $retval .= '  '.count($single).' rows ('.$this->percentage(count($single), count($result)).'%) contain only one plugin.'.LF;
         $retval .= '-----------------------------------------------------------------------------'.LF;
         return $retval;
     }
 
-    function max($expression, $num = 1) {
+    /**
+     * @param $expression
+     * @param int $num
+     * @return string
+     */
+    public function max($expression, $num = 1) {
         $key = hsc(str_replace(' ','',$expression));
         if (!$cache[$key] || !$cache[$key]['infos']) {
             $cache[$key] = $this->filter($expression, null, true);
         }
-        if (!$cache[$key]['values']) return;
+        if (!$cache[$key]['values']) return 0;
 
         arsort($cache[$key]['values']);
+        $retval = '';
+        $cnt = 0;
         foreach($cache[$key]['values'] as $name => $value) {
             $retval .= $value;
             if ($num == 1) break;
@@ -176,14 +246,22 @@ class pg_stats {
         return $retval;
     }
 
-    function min($expression, $num = 1) {
+    /**
+     * @param $expression
+     * @param int $num
+     * @return string
+     */
+    public function min($expression, $num = 1) {
         $key = hsc(str_replace(' ','',$expression));
         if (!$cache[$key] || !$cache[$key]['infos']) {
             $cache[$key] = $this->filter($expression, null, true);
         }
-        if (!$cache[$key]['values']) return;
+        if (!$cache[$key]['values']) return 0;
 
         asort($cache[$key]['values']);
+
+        $retval = '';
+        $cnt = 0;
         foreach($cache[$key]['values'] as $name => $value) {
             $retval .= $value;
             if ($num == 1) break;
@@ -193,33 +271,55 @@ class pg_stats {
         return $retval;
     }
 
-    function sum($expression) {
+    /**
+     * @param $expression
+     * @return number
+     */
+    public function sum($expression) {
         $key = hsc(str_replace(' ','',$expression));
         if (!$cache[$key] || !$cache[$key]['infos']) {
             $cache[$key] = $this->filter($expression, null, true);
         }
-        if (!$cache[$key]['values']) return;
+        if (!$cache[$key]['values']) return 0;
 
         return array_sum($cache[$key]['values']);
     }
 
-    function median($expression) {
+    /**
+     * @param $expression
+     * @return float
+     */
+    public function median($expression) {
         $key = hsc(str_replace(' ','',$expression));
         if (!$cache[$key] || !$cache[$key]['infos']) {
             $cache[$key] = $this->filter($expression, null, true);
         }
-        if (!$cache[$key]['values']) return;
+        if (!$cache[$key]['values']) return 0;
 
         $array = array_values($cache[$key]['values']);
         sort($array);
 
         if (count($array) == 1) return $array[0];
         if (count($array) % 2 == 0) {
-            $idx = count($array)/2 - 1;
+            $idx = (int) (count($array)/2 - 1);
             return ($array[$idx]+$array[$idx+1])/2;
         } else {
-            return $array[(count($array)-1)/2];
+            return $array[(int)((count($array)-1)/2)];
         }
+    }
+
+    /**
+     * Calculate percentage
+     *
+     * @param $amount
+     * @param $total
+     * @return int
+     */
+    public function percentage($amount, $total) {
+        if(!$total) {
+            return 0;
+        }
+        return (int) round($amount / $total * 100);
     }
 
 }

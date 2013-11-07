@@ -20,15 +20,22 @@ if(!defined('DOKU_PLUGIN'))
  */
 class admin_plugin_plugingardener_externalselector extends DokuWiki_Admin_Plugin {
 
-    var $externalpages = array();
+    private $externalpages = array();
+    private $cfg = array('localdir' => '/home/gerrit/dokuwiki/tmp20131106/');
 
-    function getMenuText($language) {
+    /**
+     * Return menu entry label
+     *
+     * @param $language
+     * @return string
+     */
+    public function getMenuText($language) {
         return 'Plugin gardener - External page selector';
     }
 
-    function handle() {
+    public function handle() {
 
-        $external_fn = 'C:/DokuWikiStickNew/tmp2011/externalpages.txt';
+        $external_fn = $this->cfg['localdir'].'externalpages.txt';;
         if(file_exists($external_fn)) {
             $this->externalpages = unserialize(file_get_contents($external_fn));
         }
@@ -51,7 +58,9 @@ class admin_plugin_plugingardener_externalselector extends DokuWiki_Admin_Plugin
     /**
      * output appropriate html
      */
-    function html() {
+    public function html() {
+        global $ID;
+
         ptln('<h1>External page selector</h1>');
 
         ptln('<form action="'.wl($ID).'" method="post">');
@@ -97,7 +106,13 @@ class admin_plugin_plugingardener_externalselector extends DokuWiki_Admin_Plugin
         ptln('</form>');
     }
 
-    function echolink($plugin) {
+    /**
+     * return html of link to plugin wiki page
+     *
+     * @param string $plugin name
+     * @return string
+     */
+    private function echolink($plugin) {
         return "<a href=\"http://www.dokuwiki.org/plugin:$plugin\">$plugin</a>";
     }
 

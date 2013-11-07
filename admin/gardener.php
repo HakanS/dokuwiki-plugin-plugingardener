@@ -26,35 +26,50 @@ require_once(DOKU_PLUGIN.'/plugingardener/classes/pg_reportwriter.class.php');
  */
 class admin_plugin_plugingardener_gardener extends DokuWiki_Admin_Plugin {
 
-    var $info = array();
-    var $collections = array();
+    public $info = array();
+    public $collections = array();
     // danger ! localdir is hardcode in other admin
-    var $cfg = array(
+    public $cfg = array(
         'doku_eventlist_uri'  => 'https://www.dokuwiki.org/devel:events_list',
         'doku_repo_uri'       => 'https://www.dokuwiki.org/lib/plugins/pluginrepo/repository.php',
         'doku_index_uri'      => 'https://www.dokuwiki.org/plugins',
         'doku_pluginbase_uri' => 'https://www.dokuwiki.org/plugin:',
-        'bundledsourcedir'    => 'c:/DokuWikiStickNew/dokuwiki/lib/plugins/',
-        'localdir'            => 'C:/DokuWikiStickNew/tmp2011/',
+        'bundledsourcedir'    => '/home/gerrit/dokuwiki/dokuwiki/lib/plugins/',
+        'localdir'            => '/home/gerrit/dokuwiki/tmp20131107/',
         'previousYearTotal'   => 672,
-        'offline'             => true,
-        'downloadindex'       => false,
-        'downloadpages'       => false,
-        'downloadplugins'     => false,
+        'offline'             => false, // enable/disable downloads from web
+        'downloadindex'       => true,  // download page cfg[doku_index_uri]?idx=plugin always or only when nonexists
+                                        // download page cfg[doku_index_uri]?pluginsort=p always or only when nonexists
+                                        // download xml at cfg[doku_repo_uri] always or only when nonexists
+        'downloadpages'       => false, // download plugin wiki pages from cfg[doku_pluginbase_uri] always or only when nonexists
+                                        // download external pages from founded pageurls always or only when nonexists
+                                        // download page cfg[doku_eventlist_uri] always or only when nonexists
+        'downloadplugins'     => false, // download code of plugins
         'overwrite'           => false,
-        'firstplugin'         => '',
-        'lastplugin'          => '',
-        'fasteval'            => true
+        'firstplugin'         => '',    // handle a subset of all plugins starting at this plugin
+        'lastplugin'          => '',    // handle a subset of all plugins ending at this plugin
+        'fasteval'            => true,  // skip readibility score calculation, cloc and jslint
+        'cloc'                => false, // is cloc.exe available? for counting lines of code
+        'jslint'              => false  // is running of jslint possible?
     );
 
-    function handle() {
+    public function handle() {
     }
 
-    function html() {
+    public function html() {
+        echo "<h1>Plugin Gardener</h1>";
+
         // ensure output directory exists
         $localdir = $this->cfg['localdir'];
         if(!file_exists($localdir)) {
             mkdir($localdir, 0777, true);
+        }
+
+        //test write access
+        if(!is_writable($this->cfg['localdir'])) {
+            echo "<h2>Aborted</h2>";
+            echo "Directory ".hsc($this->cfg['localdir'])." is not writable. Are the permissions correct?";
+            return;
         }
 
         // get plugins that not are plugins (manualy managed local list)
@@ -63,28 +78,32 @@ class admin_plugin_plugingardener_gardener extends DokuWiki_Admin_Plugin {
         if(!$this->collections['notPlugins']) $this->collections['notPlugins'] = array();
         $this->echodwlink($this->collections['notPlugins']);
 
-        // get list of developers with special attention
+        // get list of developers with special attention (manualy managed local list)
         $this->collections['trackedDevelopers'] = file($localdir.'tracked_developers.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         if(!$this->collections['trackedDevelopers']) $this->collections['trackedDevelopers'] = array();
         $this->collections['trackedDevErr'] = array();
 
-        // get list of previous years developers
+        // get list of previous years developers (manualy managed local list)
         $this->collections['previousDevelopers'] = file($localdir.'previous_developers.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         if(!$this->collections['previousDevelopers']) $this->collections['previousDevelopers'] = array();
         $this->collections['previousDevelopers'] = array_unique($this->collections['previousDevelopers']);
 
+        // Downloads and reads plugin wiki pages, external pages and event list from the web (or local stored files)
         $handler = new pg_dokuwikiwebexaminer($this);
         if(!$handler->execute()) {
-            echo "<h1>Aborted</h1>";
+            echo "<h2>Aborted</h2>";
             return;
         }
 
+        // Downloads source code of the plugins
         $handler = new pg_codedownloader($this);
         $handler->execute();
 
+        // collect files info and counts content of code
         $handler = new pg_codeexaminer($this);
         $handler->execute();
 
+        // create wiki pages for the survey report
         $handler = new pg_reportwriter($this);
         $handler->execute();
 
@@ -95,17 +114,23 @@ class admin_plugin_plugingardener_gardener extends DokuWiki_Admin_Plugin {
 //        echo print_r($this->collections['trackedDevErr']);
     }
 
-    function echodwlink($plugins) {
+    /**
+     * Print comma separated row of links to plugin wiki pages
+     *
+     * @param string|array $plugins array of plugin names or one plugin name
+     */
+    private function echodwlink($plugins) {
         if(!is_array($plugins)) {
             $plugins = array($plugins);
         }
+        $tmp = '';
         foreach($plugins as $plugin) {
-            $tmp .= "<a href=\"http://www.dokuwiki.org/plugin:$plugin\">$plugin</a>, ";
+            $tmp .= "<a href=\"$this->cfg[doku_pluginbase_uri]$plugin\">$plugin</a>, ";
         }
         echo substr($tmp, 0, -2);
     }
 
-    var $languageCodes = array(
+    public $languageCodes = array(
         "aa"    => "Afar",
         "ab"    => "Abkhazian",
         "ae"    => "Avestan",
