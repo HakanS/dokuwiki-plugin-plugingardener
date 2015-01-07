@@ -215,6 +215,10 @@ class pg_reportwriter extends pg_gardener {
         fwrite($fp,$s->plugins($broken_arg));
         fwrite($fp,"\n");
 
+        fwrite($fp,"===== Dependencies =====\n");
+        fwrite($fp,$s->pivot('$info["depends"]',false,false,false,null,true));
+        fwrite($fp,"\n");
+
         fwrite($fp,"===== Marked conflicting =====\n");
         fwrite($fp,"\n");
         $conflictgrp = array();
