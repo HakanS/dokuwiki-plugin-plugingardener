@@ -1,4 +1,8 @@
 <?php
+
+/**
+ * Class pg_gardener base class
+ */
 class pg_gardener {
 
     var $manager = NULL;
@@ -6,14 +10,19 @@ class pg_gardener {
     var $collections = NULL;
     var $cfg = NULL;
 
-    function pg_gardener(&$manager) {
+    /**
+     * Constructor shares attributes with admin component
+     *
+     * @param admin_plugin_plugingardener_gardener $manager
+     */
+    public function pg_gardener(&$manager) {
         $this->manager = & $manager;
         $this->info = & $manager->info;
         $this->collections = & $manager->collections;
         $this->cfg = & $manager->cfg;
     }
 
-    function execute() {
+    protected function execute() {
 	    // overridden
     }
 
@@ -21,7 +30,7 @@ class pg_gardener {
      * Copy with recursive sub-directory support
 	 * from plugin:plugin
      */
-    function dircopy($src, $dst) {
+    protected function dircopy($src, $dst) {
         global $conf;
 
         if (is_dir($src)) {
@@ -52,7 +61,7 @@ class pg_gardener {
      * delete, with recursive sub-directory support
 	 * from plugin:plugin
      */
-    function dir_delete($path) {
+    protected function dir_delete($path) {
         if (!is_string($path) || $path == "") return false;
 
         if (is_dir($path)) {
@@ -68,8 +77,6 @@ class pg_gardener {
         } else {
             return @unlink($path);
         }
-
-        return false;
     }
 
 }

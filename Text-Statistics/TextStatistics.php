@@ -1,6 +1,6 @@
 <?php
 
-    /*
+    /**
 
         TextStatistics Class
         http://code.google.com/p/php-text-statistics/
@@ -31,7 +31,6 @@
         echo 'Flesch-Kincaid Reading Ease: ' . $statistics->flesch_kincaid_reading_ease($text);
 
     */
-
     class TextStatistics {
 
         protected $strEncoding = ''; // Used to hold character encoding to be used by object, if set
@@ -39,8 +38,7 @@
         /**
          * Constructor.
          *
-         * @param string  $strEncoding    Optional character encoding.
-         * @return void
+         * @param string $strEncoding    Optional character encoding.
          */
         public function __construct($strEncoding = '') {
             if ($strEncoding <> '') {
@@ -51,7 +49,8 @@
 
         /**
          * Gives the Flesch-Kincaid Reading Ease of text entered rounded to one digit
-         * @param   strText         Text to be checked
+         * @param string $strText         Text to be checked
+         * @return float
          */
         function flesch_kincaid_reading_ease($strText) {
             $strText = $this->clean_text($strText);
@@ -60,7 +59,8 @@
 
         /**
          * Gives the Flesch-Kincaid Grade level of text entered rounded to one digit
-         * @param   strText         Text to be checked
+         * @param string $strText         Text to be checked
+         * @return float
          */
         function flesch_kincaid_grade_level($strText) {
             $strText = $this->clean_text($strText);
@@ -69,7 +69,8 @@
 
         /**
          * Gives the Gunning-Fog score of text entered rounded to one digit
-         * @param   strText         Text to be checked
+         * @param string $strText         Text to be checked
+         * @return float
          */
         public function gunning_fog_score($strText) {
             $strText = $this->clean_text($strText);
@@ -78,7 +79,8 @@
 
         /**
          * Gives the Coleman-Liau Index of text entered rounded to one digit
-         * @param   strText         Text to be checked
+         * @param  string $strText         Text to be checked
+         * @return float
          */
         public function coleman_liau_index($strText) {
             $strText = $this->clean_text($strText);
@@ -87,7 +89,8 @@
 
         /**
          * Gives the SMOG Index of text entered rounded to one digit
-         * @param   strText         Text to be checked
+         * @param string  $strText         Text to be checked
+         * @return float
          */
         public function smog_index($strText) {
             $strText = $this->clean_text($strText);
@@ -96,7 +99,8 @@
 
         /**
          * Gives the Automated Readability Index of text entered rounded to one digit
-         * @param   strText         Text to be checked
+         * @param  string $strText         Text to be checked
+         * @return float
          */
         public function automated_readability_index($strText) {
             $strText = $this->clean_text($strText);
@@ -105,10 +109,10 @@
 
         /**
          * Gives string length. Tries mb_strlen and if that fails uses regular strlen.
-         * @param   strText      Text to be measured
+         * @param string $strText      Text to be measured
+         * @return int
          */
         public function text_length($strText) {
-            $intTextLength = 0;
             try {
                 if ($this->strEncoding == '') {
                     $intTextLength = mb_strlen($strText);
@@ -123,11 +127,11 @@
 
         /**
          * Gives letter count (ignores all non-letters). Tries mb_strlen and if that fails uses regular strlen.
-         * @param   strText      Text to be measured
+         * @param string $strText      Text to be measured
+         * @return int
          */
         public function letter_count($strText) {
             $strText = $this->clean_text($strText); // To clear out newlines etc
-            $intTextLength = 0;
             $strText = preg_replace('/[^A-Za-z]+/', '', $strText);
             try {
                 if ($this->strEncoding == '') {
@@ -143,7 +147,8 @@
 
         /**
          * Trims, removes line breaks, multiple spaces and generally cleans text before processing.
-         * @param   strText      Text to be transformed
+         * @param string $strText      Text to be transformed
+         * @return mixed
          */
         protected function clean_text($strText) {
             // all these tags should be preceeded by a full stop. 
@@ -165,10 +170,10 @@
 
         /**
          * Converts string to lower case. Tries mb_strtolower and if that fails uses regular strtolower.
-         * @param   strText      Text to be transformed
+         * @param string $strText      Text to be transformed
+         * @return string
          */
         protected function lower_case($strText) {
-            $strLowerCaseText = '';
             try {
                 if ($this->strEncoding == '') {
                     $strLowerCaseText = mb_strtolower($strText);
@@ -183,10 +188,10 @@
 
         /**
          * Converts string to upper case. Tries mb_strtoupper and if that fails uses regular strtoupper.
-         * @param   strText      Text to be transformed
+         * @param string $strText      Text to be transformed
+         * @return string
          */
         protected function upper_case($strText) {
-            $strUpperCaseText = '';
             try {
                 if ($this->strEncoding == '') {
                     $strUpperCaseText = mb_strtoupper($strText);
@@ -201,12 +206,12 @@
 
         /**
          * Gets portion of string. Tries mb_substr and if that fails uses regular substr.
-         * @param   strText      Text to be cut up
-         * @param   intStart     Start character
-         * @param   intLenght    Length
+         * @param  string $strText      Text to be cut up
+         * @param  int    $intStart     Start character
+         * @param  int    $intLength    Length
+         * @return string
          */
         protected function substring($strText, $intStart, $intLength) {
-            $strSubstring = '';
             try {
                 if ($this->strEncoding == '') {
                     $strSubstring = mb_substr($strText, $intStart, $intLength);
@@ -221,7 +226,8 @@
 
         /**
          * Returns sentence count for text.
-         * @param   strText      Text to be measured
+         * @param string $strText      Text to be measured
+         * @return mixed
          */
         public function sentence_count($strText) {
             $strText = $this->clean_text($strText);
@@ -232,7 +238,8 @@
 
         /**
          * Returns word count for text.
-         * @param   strText      Text to be measured
+         * @param   string $strText      Text to be measured
+         * @return int
          */
         public function word_count($strText) {
             $strText = $this->clean_text($strText);
@@ -243,7 +250,8 @@
 
         /**
          * Returns average words per sentence for text.
-         * @param   strText      Text to be measured
+         * @param   string $strText      Text to be measured
+         * @return float
          */
         public function average_words_per_sentence($strText) {
             $strText = $this->clean_text($strText);
@@ -254,7 +262,8 @@
 
         /**
          * Returns average syllables per word for text.
-         * @param   strText      Text to be measured
+         * @param   string $strText      Text to be measured
+         * @return float
          */
         public function average_syllables_per_word($strText) {
             $strText = $this->clean_text($strText);
@@ -269,8 +278,9 @@
 
         /**
          * Returns the number of words with more than three syllables
-         * @param   strText                  Text to be measured
-         * @param   blnCountProperNouns      Boolean - should proper nouns be included in words count
+         * @param   string $strText                  Text to be measured
+         * @param   bool   $blnCountProperNouns      Boolean - should proper nouns be included in words count
+         * @return int
          */
         public function words_with_three_syllables($strText, $blnCountProperNouns = true) {
             $strText = $this->clean_text($strText);
@@ -295,8 +305,9 @@
 
         /**
          * Returns the percentage of words with more than three syllables
-         * @param   strText      Text to be measured
-         * @param   blnCountProperNouns      Boolean - should proper nouns be included in words count
+         * @param   string $strText      Text to be measured
+         * @param   bool   $blnCountProperNouns      Boolean - should proper nouns be included in words count
+         * @return float
          */
         public function percentage_words_with_three_syllables($strText, $blnCountProperNouns = true) {
             $strText = $this->clean_text($strText);
@@ -309,7 +320,8 @@
         /**
          * Returns the number of syllables in the word.
          * Based in part on Greg Fast's Perl module Lingua::EN::Syllables
-         * @param   strWord      Word to be measured
+         * @param   string $strWord      Word to be measured
+         * @return int
          */
         public function syllable_count($strWord) {
 
@@ -409,5 +421,3 @@
         }
 
     }
-
-?>
